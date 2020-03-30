@@ -1,0 +1,40 @@
+<!-- Progress -->
+<template>
+  <section class='Progress'>
+    <progress :value="value" :max="max" :hidden="!show"></progress>
+  </section>
+</template>
+
+<script>
+export default {
+  props: ['value', 'max', 'show'],
+  components: {},
+  data () {
+    // 这里存放数据
+    return {
+      // 父组件数据结构
+      // progress: {
+      //   value: 1,
+      //   max: 100,
+      //   show: false
+      // }
+    }
+  },
+  // 监听属性 类似于data概念
+  computed: {},
+  // 监控data中的数据变化
+  watch: {},
+  // 方法集合
+  methods: {
+  },
+  // 生命周期 - 创建完成（可以访问当前this实例）
+  created () {
+  },
+  // 生命周期 - 挂载完成（可以访问DOM元素）
+  mounted () {
+  }
+}
+</script>
+<style lang='scss' scoped>
+// @import url(); 引入公共css类
+</style>
