@@ -1,0 +1,23 @@
+/*span样式*/
+span.inline{display: inline-block;}
+span.block{display: block;}
+span.pointer{cursor: pointer;}
+/*公共样式*/
+.flex-ul{width:100%;display: flex;}
+.flex-ul.row{flex-direction: row;}
+.flex-ul.column{flex-direction: column;}
+.flex-ul.flex-wrap{flex-wrap:wrap;}
+.flex-ul > .flex-li{display: flex;flex-grow: 1;justify-content:center;align-items: center;height:auto;}
+.flex-wrap > .flex-li{width:25%;flex-grow: 0;justify-content:center;align-items: center;height:auto;}
+/*height高度在具体class在定义,调试时注释boder*/
+.flex-ul .flex-li .li-info{flex-grow: 1;}
+/*.flex-ul .flex-li .li-info{flex-grow: 1;height:60rpx;line-height: 60rpx;}*/
+/*.flex-ul .flex-li .li-info {border:solid 1rpx #ddd;}*/
+.flex-aside{width:400rpx;}
+.flex-content{flex-grow: 5;}
+.link-red{color:#ec3a39;}
+.link-grey{color:#9c9c9c;}
+.link-rtl{text-align: right;}
+.li-info.t-center{text-align: center;}
+.li-info.t-left{text-align: left;}
+.flex-li.no-flex {display: block;}

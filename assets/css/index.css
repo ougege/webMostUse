@@ -1,0 +1,8 @@
+:root {
+  --bgStyle: #00c1de;
+  --colorStyle: #00c1de;
+  --topBarStyle: #24343e;
+  --bodyBgStyle: #1a263a;
+  --asideHoverBgStyle: #2f4569;
+}
+@import '../css/flex-ui.css'
