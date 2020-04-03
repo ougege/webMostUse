@@ -12,12 +12,6 @@ export default {
   data () {
     // 这里存放数据
     return {
-      // 父组件数据结构
-      // progress: {
-      //   value: 1,
-      //   max: 100,
-      //   show: false
-      // }
     }
   },
   // 监听属性 类似于data概念
@@ -36,5 +30,4 @@ export default {
 }
 </script>
 <style lang='scss' scoped>
-// @import url(); 引入公共css类
 </style>
