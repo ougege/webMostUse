@@ -1,9 +1,8 @@
 import {areaInfoUtil} from './areaInfo/AreaInfoUtil'
-import {type} from './type'
-const validateRules = require('./validateRules')
-// const authHttp = require('./http/authHttp')
-const config = require('../common/appConfig')
-// import {setStorage, getStorage, removeStorage, clearStorage} from './storage'
+import {type} from './common/type'
+import {amap} from './AMap/amap'
+import {uniUtil} from './uniUtil'
+import config from '../utils/config'
 var base64encodechars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 var base64decodechars = [
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -15,8 +14,35 @@ var base64decodechars = [
   -1, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
   41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1]
 
+// 观察对象方法
+const domWatch = function(domObj, callback){
+  return new domWatchClass(domObj, callback)
+}
+const domWatchClass = function(domObj, callback){
+  let domObserver = new MutationObserver(callback)
+  let option = {
+    'childList': true, // 子节点的变动
+    'attributes': true, // 属性的变动
+    'characterData': true // 节点内容或节点文本的变动
+  }
+  domObserver.observe(domObj, option)
+  this.tempObj = domObserver
+  this.stopWatch = function () {
+    this.tempObj.disconnect()
+  }
+}
+
+// rgb转16进制
+function insertZero(R,G,B){
+  R = R.toString(16).length>=2?R.toString(16):"0"+R.toString(16)
+  G = G.toString(16).length>=2?G.toString(16):"0"+G.toString(16)
+  B = B.toString(16).length>=2?B.toString(16):"0"+B.toString(16)
+  
+  return R+G+B
+}
+
 const util = {
-  base64encode: function (str) {
+  base64encode (str) {
     var out
     var i
     var len
@@ -50,7 +76,7 @@ const util = {
     }
     return out
   },
-  base64decode: function (str) {
+  base64decode (str) {
     var c1
     var c2
     var c3
@@ -100,100 +126,24 @@ const util = {
     }
     return out
   },
-  // 获取数据
-  // getData (url, params, method, cb, failCb) {
-  //   let that = this
-  //   if (type['isUndefined'](method)) {
-  //     method = 'POST'
-  //   }
-  //   if (method.toUpperCase() === 'GET') {
-  //     authHttp.get(url, params).then(res => {
-  //       if (that.setData) {
-  //         that.setData({
-  //           netTimeOut: false // 不超时
-  //         })
-  //       } else {
-  //         that.netTimeOut = false
-  //       }
-  //       type['isFunction'](cb) && cb(res)
-  //     }).catch(res => {
-  //       errorFunction(that, res, failCb)
-  //     })
-  //   } else {
-  //     authHttp.post(url, params).then(res => {
-  //       if (that.setData) {
-  //         that.setData({
-  //           netTimeOut: false
-  //         })
-  //       } else {
-  //         that.netTimeOut = false
-  //       }
-  //       type['isFunction'](cb) && cb(res)
-  //     }).catch(res => {
-  //       errorFunction(that, res, failCb)
-  //     })
-  //   }
-  // },
-  // 获取下一页数据
-  // etNextPageData (url, params, method, cb, failCb) {
-  //   let that = this
-  //   this.getData.call(that, url, params, method,
-  //     (res) => {
-  //       // 当前页码等于总页码则没有更多
-  //       let hasMore = res.data.PageCount === res.data.CurrentPageIndex ? false : true
-  //       if (that.setData) {
-  //         that.setData({
-  //           dataList: [...that.data.dataList, ...res.data.DataRows],
-  //           pageIndex: res.data.CurrentPageIndex,
-  //           hasMore: hasMore
-  //         })
-  //       } else {
-  //         that.dataList = [...that.data.dataList, ...res.data.DataRows]
-  //         that.pageIndex = res.data.CurrentPageIndex
-  //         that.hasMore = hasMore
-  //       }
-  //       type['isFunction'](cb) && cb(res)
-  //     },
-  //     (err) => {
-  //       type['isFunction'](failCb) && failCb(err)
-  //     }
-  //   )
-  // },
-  // 错误处理
-  errorFunction (that, res, failCb) {
-    // 无错误状态
-    if (res.errMsg && res.errMsg.includes('request:fail')) {
-      if (that.setData) {
-        that.setData({
-          netTimeOut: true
-        })
-      } else {
-        that.netTimeOut = true
-      }
-      if (failCb && type['isFunction'](failCb)) {
-        if (res.data) {
-          res.data.message = '请求超时'
-        } else {
-          res.data = {message: '请求超时'}
-        }
-        failCb(res)
-        return false
-      }
+  // 常用拷贝
+  cloneObj (obj) {
+    let str
+    if (!obj) {
+      return obj
+    }
+    let newobj = obj.constructor === Array ? [] : {}
+    if (typeof obj !== 'object') {
+      return
+    } else if (window.JSON) {
+      str = JSON.stringify(obj) // 序列化对象
+      newobj = JSON.parse(str) // 还原
     } else {
-      let status = res.statusCode
-      switch (status) {
-        // case 460 短信
-        case 401:
-          // 重新获取token 等方法
-          break
-        default:
-          // 如果业务已经定义了错误提示，则使用业务的处理
-          if (failCb && type['isFunction'](failCb)) {
-            failCb(res)
-            return false
-          }
+      for (var i in obj) {
+        newobj[i] = typeof obj[i] === 'object' ? this.cloneObj(obj[i]) : obj[i]
       }
     }
+    return newobj
   },
   // 浅拷贝
   shallowCopy (obj) {
@@ -205,7 +155,7 @@ const util = {
       )
     }
   },
-  // 深拷贝
+  // 深拷贝:大对象会堆栈溢出
   deepCopy (obj) {
     let target = {}
     if (type['isNull'](obj) || typeof obj !== 'object') {
@@ -223,60 +173,71 @@ const util = {
     }
     return target
   },
-  // 分享页面操作
-  commonShareAppMessage (params) {
-    if (type['isUndefined'](params)) {
-      params = config.shareMessage
+  // 深拷贝：终极
+  objectDeepClone (obj,isForce) {
+    if(!obj || Object.prototype.toString.call(obj) !== '[object Object]'){
+      return obj
     }
-    return params
+    var uniqueList = []
+    var isForce = !!isForce
+    var result = {}
+    var loopList = [
+      {
+        parent: result,
+        key: undefined,
+        data: obj
+      }
+    ]
+    while(loopList.length){
+      var node = loopList.pop()
+      var parent = node.parent
+      var key = node.key
+      var data = node.data
+      var tempRes = parent
+      if(key !== undefined){
+        tempRes = parent[key] = {}
+      }
+      if(!isForce){
+        var uniqueData = this.uniqueFind(uniqueList,data)
+        if(uniqueData){
+          parent[key] = uniqueData.target
+          continue
+        }
+      }
+      uniqueList.push({
+        source: data,
+        target: tempRes
+      })
+      for(var k in data){
+        if(data.hasOwnProperty(k)){
+          var val = data[k]
+          if(Object.prototype.toString.call(val) === '[object Object]'){
+            loopList.push({
+              parent: tempRes,
+              key: k,
+              data: val
+            })
+          }else{
+            // 增加逻辑，将function转成string
+            tempRes[k] = type['isFunction'](val) ? val.toString() : val
+          }
+        }
+      }
+  
+    }
+    uniqueList = null
+    return result
   },
-  // 统一跳转方法:t跳转类型
-  // <text catchtap='doViewTap' data-url='/pages/login/login?title=navigate'>跳转</text>
-  // let data = e.currentTarget.dataset
-  // let url = data.url
-  // app.util.commonViewTap(url)
-  // commonViewTap (url, t) {
-  //   switch (t) {
-  //     case 1: // 关闭当前页面,跳转到应用内的某个页面.但是不允许跳转到tabbar
-  //       wx.redirectTo({
-  //         url: url
-  //       })
-  //       break
-  //     case 2: // 跳转到tabbar页面,并关闭其他所有非tabBar页面
-  //       wx.switchTab({
-  //         url: url
-  //       })
-  //       break
-  //     case 3: // 关闭所有页面，打开到应用内的某个页面
-  //       wx.reLaunch({
-  //         url: url
-  //       })
-  //       break
-  //     case 99: // 关闭当前页面,跳转到应用内的某个页面。但是不能跳到tabbar页面.getCurrentPages()获取页面栈
-  //       wx.navigateBack({
-  //         delta: 1
-  //       })
-  //     default: // 保留当前页面，跳转到应用内的某个页面使用 wx.navigateBack 可以返回到原页面。小程序中页面栈最多十层
-  //       // 新增events方法，页面通信 https://developers.weixin.qq.com/miniprogram/dev/api/route/wx.navigateTo.html
-  //       wx.navigateTo({
-  //         url: url
-  //       })
-  //   }
-  // },
-  // 微信内置地图位置
-  // viewWxAddress (args) {
-  //   if (!args || type['isUndefined'](args.latitude) || type['isUndefined'](args.longitude)) {
-  //     // 错误坐标会定位到北京
-  //     return
-  //   }
-  //   wx.openLocation({
-  //     latitude: args.latitude, // 经度
-  //     longitude: args.longitude, // 纬度
-  //     name: args.name, // 位置名
-  //     address: args.address, // 地址详细说明
-  //     scale: args.scale || 18 // 5-18,默认18
-  //   })
-  // },
+  // 深拷贝：extra 数组中循环查找存在对象
+  uniqueFind (arr, item) {
+    var len = arr.length
+    while (len--){
+      if (arr[len].source === item) {
+        return arr[len]
+      }
+    }
+    return null
+  },
   // 数组去重:不带id普通数组去重;带id，数组对象去重
   arrDuplicateRemove (arr, id) {
     let temp = []
@@ -338,96 +299,20 @@ const util = {
     }
     return `${result}.${decimal}`
   },
-  // 获取客户端系统信息
-  // https://developers.weixin.qq.com/miniprogram/dev/api/base/system/system-info/wx.getSystemInfoSync.html
-  // getSystemInfoSync () {
-  //   // let res = wx.getSystemInfo()
-  //   let systemInfo = {}
-  //   try {
-  //     let res = wx.getSystemInfoSync() // 同步版本
-  //     systemInfo = {
-  //       brand: res.brand, // 设备品牌
-  //       model: res.model, // 设备型号
-  //       pixelRatio: res.pixelRatio, // 设备像素比
-  //       screenWidth: res.screenWidth, // 屏幕宽度
-  //       screenHeight: res.screenHeight, // 屏幕高度
-  //       windowWidth: res.windowWidth, // 可使用窗口宽度
-  //       windowHeight: res.windowHeight, // 可使用窗口高度
-  //       statusBarHeight: res.statusBarHeight, // 状态栏的高度
-  //       language: res.language, // 微信设置的语言
-  //       version: res.version, // 微信版本号
-  //       system: res.system, // 操作系统和版本
-  //       platform: res.platform // 客户端平台
-  //     }
-  //   } catch (e) {
-  //     console.log(e)
-  //   }
-  //   let loginLog = {
-  //     City: null, // 登录所在城市（需要请求用户授权获取手机定位）
-  //     Province: null, // 登录所在省份（需要请求用户授权获取手机定位）
-  //     Country: null, // 登录所在国家（需要请求用户授权获取手机定位）
-  //     Language: systemInfo.language || 'zh_CN', // 浏览的语言风格
-  //     ThirdAppType: 1, // 第三方登录凭证类型 = ['微信小程序' = 1, '其他' = 999], 使用数值，避免变更名称后出错
-  //     SourceType: '小程序', // 登陆渠道 = ['Web', '小程序', 'App', '微信公众号', '其它']
-  //     DeviceType: 'CellPhone', // 登录设备类型 = ['PC', 'Pad', 'CellPhone']
-  //     Sysetm: systemInfo.system || null, // 客户机系统类型
-  //     Platform: 'WeChat', // 产品寄宿的平台
-  //     PFMVersion: null, // 产品寄宿的平台的版本
-  //     ProductVersion: config.productVersion
-  //   }
-  //   return {systemInfo: systemInfo, loginLog: loginLog}
-  // },
-  // 上传图片
-  // https://developers.weixin.qq.com/miniprogram/dev/api/network/upload/wx.uploadFile.html
-  // uploadImg (url, params, cb, failCb) {
-  //   let that = this
-  //   wx.chooseImage({
-  //     count: 1,
-  //     sizeType: ['original', 'compressed'], // 指定原图，默认图
-  //     sourceType: ['album', 'camera'], // 指定来源相册或相机
-  //     success (res) {
-  //       // tempFilePath可以作为img标签的src属性显示图片
-  //       let tempFilePaths = res.tempFilePaths
-  //       let accessToken = wx.getStorageSync('access_token')
-  //       let header = Object.assign({}, {'Authorization': authHttp.authorization(accessToken)})
-  //       wx.uploadFile({
-  //         url: url,
-  //         filePath: tempFilePaths[0],
-  //         name: 'pic',
-  //         formData: params,
-  //         success (res){
-  //           type['isFunction'](cb) && cb(res)
-  //         },
-  //         fail (res) {
-  //           type['isFunction'](failCb) && failCb(res)
-  //         }
-  //       })
-  //     }
-  //   })
-  // },
-  // 拿到上一页对象
-  // getPrePage () {
-  //   let pages = getCurrentPages()
-  //   let length = pages.length
-  //   if (length < 2) {
-  //     throw new Error('不存在前一页Page')
-  //   }
-  //   return pages[length - 2]
-  // },
   // 根据传入的坐标判断左滑右滑
-  // touchDirection (endX, endY, startX, startY) {
-  //   if (endX - startX > 50 && Math.abs(endY - startY) < 50) {
-  //     return 'right'
-  //   }
-  //   if (endX - startX < -50 && Math.abs(endY - startY) < 50) {
-  //     return 'left'
-  //   }
-  // },
+  touchDirection (endX, endY, startX, startY) {
+    if (endX - startX > 50 && Math.abs(endY - startY) < 50) {
+      return 'right'
+    }
+    if (endX - startX < -50 && Math.abs(endY - startY) < 50) {
+      return 'left'
+    }
+  },
   // 小于10加0处理
   addZero (e) {
     return Number(e) < 10 ? `0${e}` : e
   },
-  // 时间格式化:同时将时间统一处理成斜杠
+  // 利用正则匹配将任意时间格式化
   // yyyy/MM/dd hh:mm:ss
   dateFormat (dateIn, fmt) {
     if (!fmt) return false
@@ -446,6 +331,30 @@ const util = {
       }
     }
     return fmt
+  },
+  // 时间格式化
+  formatDateTime (dateTime, type) {
+    let newDateStr = dateTime.replace(/-/g, '/')
+    let newDate = new Date(newDateStr)
+    let year = newDate.getFullYear()
+    let month = addZero(newDate.getMonth() + 1)
+    let day = addZero(newDate.getDate())
+    let weekDay = transWeekDay(newDate.getDay())
+    let hour = addZero(newDate.getHours())
+    let minute = addZero(newDate.getMinutes())
+    let second = addZero(newDate.getSeconds())
+    if (type === 1) {
+      // 2019/08/30 15:20:39
+      return ` ${year}/${month}/${day} ${hour}:${minute}:${second} `
+    }
+    if (type === 2) {
+      // 2019/08/30
+      return ` ${year}/${month}/${day} `
+    }
+    if (type === 3) {
+      // 2019/08/30 周六 15:20:39
+      return `${year}/${month}/${day} ${weekDay} ${hour}:${minute}`
+    }
   },
   // new 一个时间戳:无参返回当前时间戳,有参返回传入时间的时间戳
   newTimeStamp (dateIn) {
@@ -505,18 +414,114 @@ const util = {
     }
     return obj
   },
-  // api请求时，给params动态赋值
-  objectAddAttr (obj, value, attr) {
-    if (type['isObject'](obj) && type['isString'](attr) && value !== null) {
-      let test = {}
-      test[attr] = value
-      Object.assign(obj, test)
+  // 时间:秒转换
+  transSecond (second, type) {
+    // 转换成时分
+    let minute = this.addZero(Math.floor(second / 60))
+    let hour = this.addZero(Math.floor(minute / 60))
+    if (type == 1) {
+      return `${hour}:${minute}`
+    }
+  },
+  sectionToChinese (section) {
+    section = parseInt(section)
+    var chnNumChar = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九']
+    var chnUnitSection = ['', '万', '亿', '万亿', '亿亿']
+    var chnUnitChar = ['', '十', '百', '千']
+    var strIns = '', chnStr = ''
+    var unitPos = 0
+    var zero = true
+    while (section > 0) {
+      var v = section % 10
+      if (v === 0) {
+        if (!zero) {
+          zero = true
+          chnStr = chnNumChar[v] + chnStr
+        }
+      } else {
+        zero = false
+        strIns = chnNumChar[v]
+        strIns += chnUnitChar[unitPos]
+        chnStr = strIns + chnStr
+      }
+      unitPos++
+      section = Math.floor(section / 10)
+    }
+    return chnStr
+  },
+  getPhoneNumberCodeString(phone) {
+    let PhoneNumberString = phone ? phone.substring(0, 3) + '****' + phone.substring(7, 11) : '无'
+    return PhoneNumberString
+  },
+  // 处理相对路径url问题。为相对路径增加host头，如果是绝对路径则不需要再添加
+  dealRelativeUrl(url, hostToAdd) {
+    if (!url) {
+      return ''
+    }
+    if (!hostToAdd) {
+      return url
+    }
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url
+    }
+    // 移除最后的/
+    hostToAdd = (hostToAdd.substring(hostToAdd.length - 1) === '/') ? hostToAdd.substring(0, hostToAdd.length - 1) : hostToAdd;
+    return hostToAdd + '/' + url
+  },
+  // 压缩图片比例: 1-100
+  compressImg (url, type) {
+    let val = type ? type : 100
+    return `${url}?x-oss-process=image/resize,p_${val}`
+  },
+  // 长边压缩, val越大,图片越大
+  compressImgLongLine (url, val = 200) {
+    return `${url}?x-oss-process=image/resize,l_${val}`
+  },
+  // 生成俩个随机数之间的数字:type控制整数还是浮点数
+  randomBetween (arr, type) {
+    let a = Number(arr[0])
+    let b = Number(arr[1])
+    let min = a < b ? a : b
+    let max = a < b ? b : a
+    if (type === 'float') {
+      return min + Math.random() * (max - min)
     } else {
-      throw new Error('参数有误')
+      return Math.floor(min + Math.random() * (max - min + 1))
+    }
+  },
+  // 冒泡排序
+  bubble (arr) {
+    let temp
+    for (var i = 0; i < arr.length - 1; i++) {    
+      for(var j = 0; j < arr.length - i - 1; j++) {
+        if (arr[j] > arr[j+1]) {
+          temp = arr[j]
+          arr[j] = arr[j+1]
+          arr[j+1] = temp
+        }
+      }
+    }
+    return arr
+  },
+  // 随机颜色: 1是rgb,0是
+  colorRandom (type === 1) {
+    if (type) {
+      let r = numRandom(0,255)
+      let g = numRandom(0,255)
+      let b = numRandom(0,255)
+      return `rgb(${r},${g},${b})`
+    } else {
+      let r = numRandom(0,255)
+      let g = numRandom(0,255)
+      let b = numRandom(0,255)
+      return '#' + insertZero(r,g,b)
     }
   },
   areaInfoUtil: areaInfoUtil,
-  validateRules: validateRules
+  type: type,
+  amap: amap,
+  domWatch: domWatch,
 }
 
+Object.assign(util, uniUtil)
 export {util}
