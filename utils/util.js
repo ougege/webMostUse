@@ -503,9 +503,9 @@ const util = {
     }
     return arr
   },
-  // 随机颜色: 1是rgb,0是
-  colorRandom (type === 1) {
-    if (type) {
+  // 随机颜色: 0是rgb,1是16进制
+  colorRandom (type) {
+    if (!type) {
       let r = numRandom(0,255)
       let g = numRandom(0,255)
       let b = numRandom(0,255)
