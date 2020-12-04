@@ -577,6 +577,22 @@ const uniUtil = {
   },
   abortAllRequest,
   isAllRequestOver,
+  // 通过id获取元素的布局位置和滚动位置
+  getboundingClientRect(that, id){
+    return new Promise((resolve)=>{
+      that.$nextTick(() => {
+        uni.createSelectorQuery().in(that).select('#' + id).fields({
+          id: true,
+          dataset: true,
+          rect: true,
+          size: true,
+          scrollOffset: true
+        }, data => {
+          resolve(data)
+        }).exec()
+      })
+    })
+  }
 }
 
 export {uniUtil}
